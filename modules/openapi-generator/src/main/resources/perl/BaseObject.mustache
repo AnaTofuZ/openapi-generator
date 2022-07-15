@@ -55,7 +55,16 @@ sub TO_JSON {
     my $_data = {};
     foreach my $_key (keys %{$self->attribute_map}) {
         if (defined $self->{$_key}) {
-            $_data->{$self->attribute_map->{$_key}} = $self->{$_key};
+            my $type = $self->openapi_types->{$_key};
+            my $_value = $self->{$_key};
+            if ( grep( /^$type$/, ('int', 'double'))) {
+                $_value = $_value + 0;
+            } elsif ($type eq 'string') {
+                $_value = $_value . q();
+            } elsif ($type eq 'boolean') {
+                $_value = !!$_value;
+            }
+            $_data->{$self->attribute_map->{$_key}} = $_value;
         }
     }
     {{#allParents}}
