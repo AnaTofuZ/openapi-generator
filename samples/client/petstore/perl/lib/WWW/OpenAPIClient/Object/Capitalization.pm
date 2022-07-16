@@ -99,13 +99,43 @@ sub TO_JSON {
     my $self = shift;
     my $_data = {};
     foreach my $_key (keys %{$self->attribute_map}) {
+        my $_json_attribute = $self->attribute_map->{$_key};
         if (defined $self->{$_key}) {
-            $_data->{$self->attribute_map->{$_key}} = $self->{$_key};
+            my $_type = $self->openapi_types->{$_key};
+            my $_value = $self->{$_key};
+            if ($_type =~ /^array\[(.+)\]$/i) { # array
+                my $_subclass = $1;
+                $_data->{$_json_attribute} =  [ map { $self->_to_json_primitives($_subclass, $_) } @$_value ];
+            } elsif ($_type =~ /^hash\[string,(.+)\]$/i) { # hash
+                my $_subclass = $1;
+                my %_hash = ();
+                while (my($_key, $_element) = each %{$_value}) {
+                    $_hash{$_key} = $self->_to_json_primitives($_subclass, $_element);
+                }
+                $_data->{$_json_attribute} = \%_hash;
+            } elsif ( grep( /^$_type$/, ('int', 'double', 'string', 'boolean'))) {
+                $_data->{$_json_attribute} = $self->_to_json_primitives($_type, $_value);
+            } else {
+                $_data->{$_json_attribute} = $_value;
+            }
         }
     }
 
     return $_data;
 }
+
+# to_json non-array data
+sub _to_json_primitives {
+    my ($self, $type, $data) = @_;
+    if ( grep( /^$type$/, ('int', 'double'))) {
+        return $data + 0;
+    } elsif ($type eq 'string') {
+        return $data . q();
+    } elsif ($type eq 'boolean') {
+        return $data ? \1 : \0;
+    }
+}
+
 
 # from Perl hashref
 sub from_hash {
@@ -145,8 +175,12 @@ sub _deserialize {
 
     if ($type eq 'DateTime') {
         return DateTime->from_epoch(epoch => str2time($data));
-    } elsif ( grep( /^$type$/, ('int', 'double', 'string', 'boolean'))) {
-        return $data;
+    } elsif ( grep( /^$type$/, ('int', 'double'))) {
+        return $data + 0;
+    } elsif ($type eq 'string') {
+        return $data . q();
+    } elsif ($type eq 'boolean') {
+        return !!$data;
     } else { # hash(model)
         my $_instance = eval "WWW::OpenAPIClient::Object::$type->new()";
         return $_instance->from_hash($data);
