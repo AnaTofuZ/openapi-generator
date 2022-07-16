@@ -148,7 +148,7 @@ sub _deserialize {
     my ($self, $type, $data) = @_;
     $log->debugf("deserializing %s with %s",Dumper($data), $type);
 
-    if ($type eq 'DateTime') {
+    if (grep( /^$type$/ , ('DATE_TIME', 'DATE'))) {
         return DateTime->from_epoch(epoch => str2time($data));
     } elsif ( grep( /^$type$/, ('int', 'double'))) {
         return $data + 0;
